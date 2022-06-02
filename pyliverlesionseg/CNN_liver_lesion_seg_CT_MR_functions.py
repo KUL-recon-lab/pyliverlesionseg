@@ -1076,27 +1076,20 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
     except:
       logger.error(f'Failed to read dicoms from {process_dir}')
   else:
-    nifti_files = glob(os.path.join(process_dir,'*.nii'))
-    if len(nifti_files) == 1:
-      img_nii = nib.load(nifti_files[0])
-      img_nii = nib.as_closest_canonical(img_nii)
-      img_vol = img_nii.get_data()  
-      # transform the volume to LPS
-      img_vol = np.flip(img_vol, [0,1])
-      voxsize_img = img_nii.header['pixdim'][1:4]
-      # read the affine
-      affine_lps       = img_nii.affine.copy()
-      affine_lps[0,-1] = (-1 * img_nii.affine @ np.array([img_vol.shape[0]-1,0,0,1]))[0]
-      affine_lps[1,-1] = (-1 * img_nii.affine @ np.array([0,img_vol.shape[1]-1,0,1]))[1]
+    img_nii = nib.load(process_dir)
+    img_nii = nib.as_closest_canonical(img_nii)
+    img_vol = img_nii.get_data()  
+    # transform the volume to LPS
+    img_vol = np.flip(img_vol, [0,1])
+    voxsize_img = img_nii.header['pixdim'][1:4]
+    # read the affine
+    affine_lps       = img_nii.affine.copy()
+    affine_lps[0,-1] = (-1 * img_nii.affine @ np.array([img_vol.shape[0]-1,0,0,1]))[0]
+    affine_lps[1,-1] = (-1 * img_nii.affine @ np.array([0,img_vol.shape[1]-1,0,1]))[1]
+    
+    if Modality is None:
+      logger.error(f'Modliaty has to be given when the input image is in NIFTI format. Modality should be CT or MR.')
       
-      if Modality is None:
-        logger.error(f'Modliaty has to be given when the input image is in NIFTI format. Modality should be CT or MR.')
-        
-    elif len(nifti_files) == 0:
-      logger.error(f'No NIFTI file exists in {process_dir}')
-    else:
-      logger.error(f'Multiple NIFTI files exist in {process_dir}') 
-  
   # in case we get a 4D volume (e.g. multi echo MR, we use the first frame/echo)
   if img_vol.ndim == 4:
     img_vol = img_vol[0,:,:,:]
