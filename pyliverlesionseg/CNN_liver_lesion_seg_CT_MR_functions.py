@@ -64,9 +64,9 @@ def setup_logger(name, log_path, level = logging.INFO, formatter = None, mode = 
 
 #-------------------------------------------------------------------------
 
-def unet_liver_predict(ct_prepro_list,
+def unet_liver_predict(image_prepro,
                  segment_size,
-                 ct_path,
+                 input_data,
                  unet_path,
                  out_path,
                  weight_decay    = 1e-5,
@@ -79,11 +79,13 @@ def unet_liver_predict(ct_prepro_list,
    Parameters 
    -----------
    
-   ct_prepro_list: a list of 3d numpy arrays which contain the preprocessed CT volumes.
-   
-   unet_path: the path where the trained U-net model is saved.
+   image_prepro: a list of 3d numpy arrays which contain the preprocessed CT volumes.
    
    segment_size: the output segment size of the trained U-net model.
+   
+   input_data: a directory containing the DICOM files of an image or the NIFTI file name of an image.
+      
+   unet_path: the path where the trained U-net model is saved.
    
    weight_decay: the weight of the regularizer.
    
@@ -104,9 +106,6 @@ def unet_liver_predict(ct_prepro_list,
    print("*********************************************************")
    print("Retrieving previous U-net " + unet_path) 
    
-   ct_files = glob(ct_path)
-   ct_files.sort()
-
    model = create_unet_like_model(
                         number_input_features=1,
                         subsample_factors_per_pathway=[
@@ -139,7 +138,7 @@ def unet_liver_predict(ct_prepro_list,
    deepVoxNet = DeepVoxNet(model, center_sampling=center_sampling)
 
    # Testing data loaders
-   full_testing_inputLoader = sampling.ImageLoader(ct_prepro_list)
+   full_testing_inputLoader = sampling.ImageLoader(image_prepro)
 
    # X creator
    full_testing_x_creator = sampling.Concat([
@@ -152,38 +151,32 @@ def unet_liver_predict(ct_prepro_list,
    else:
       full_testing_sampler = sampling.ForcedUniformCoordinateSampler(full_testing_inputLoader)
 
-   dummy = [os.path.basename(p[:-1]) for p in ct_files]
-   #dummy = [p.replace("orig", "pred_median") for p in dummy]
-   dummy = [p + "_pred_median" for p in dummy]
-   dummy = [os.path.join(out_path, p) for p in dummy]
-   test_output_paths = dummy
-   cnn_pred_median_list = []
-   for subject_id, test_output_path in enumerate(test_output_paths):
-       print('segmenting ' + os.path.basename(ct_files[subject_id][:-1]) +
-             ' ==> ' + os.path.basename(test_output_path))
-       if not save_output:
-          test_output_path = None
-       cnn_pred_median = deepVoxNet.predict(
-                           x_creator=full_testing_x_creator,
-                           sampler=full_testing_sampler,
-                           subject_id=subject_id,
-                           out_path=test_output_path,
-                           verbose=True,
-                           batch_size=1,
-                           auto_recalibration=False,
-                           stack_recalibrated=False,
-                           output_layer_idx=[0],
-                           include_output_layer_name_in_out_path=False,
-                           auto_return_first_only=True
-                         )
-       cnn_pred_median_list.append(cnn_pred_median)
+   dummy = os.path.basename(input_data) + "_cnn_output_liver.nii" 
+   test_output_path = os.path.join(out_path, dummy)
+   print('segmenting ' + input_data +
+         ' ==> ' + os.path.basename(test_output_path))
+   if not save_output:
+      test_output_path = None
+   cnn_pred_median = deepVoxNet.predict(
+                       x_creator=full_testing_x_creator,
+                       sampler=full_testing_sampler,
+                       subject_id=subject_id,
+                       out_path=test_output_path,
+                       verbose=True,
+                       batch_size=1,
+                       auto_recalibration=False,
+                       stack_recalibrated=False,
+                       output_layer_idx=[0],
+                       include_output_layer_name_in_out_path=False,
+                       auto_return_first_only=True
+                     )
 
    print("The total time for CNN liver prediction is {:.2f} s".format(time.time() - start_time_1))
-   return cnn_pred_median_list
+   return cnn_pred_median
 
-def unet_lesion_predict(ct_prepro_list,
+def unet_lesion_predict(image_prepro,
                  segment_size,
-                 ct_path,
+                 input_data,
                  unet_path,
                  out_path,
                  weight_decay    = 1e-5,
@@ -196,12 +189,14 @@ def unet_lesion_predict(ct_prepro_list,
    Parameters 
    -----------
    
-   ct_prepro_list: a list of 3d numpy arrays which contain the preprocessed CT volumes.
-   
-   unet_path: the path where the trained U-net model is saved.
+   image_prepro: a list of 3d numpy arrays which contain the preprocessed CT volumes.
    
    segment_size: the output segment size of the trained U-net model.
    
+   input_data: a directory containing the DICOM files of an image or the NIFTI file name of an image.
+   
+   unet_path: the path where the trained U-net model is saved.
+      
    weight_decay: the weight of the regularizer.
    
    center_sampling: determine if center sampling is used for the input CT images. If True, center sampling is used.
@@ -220,9 +215,6 @@ def unet_lesion_predict(ct_prepro_list,
    start_time_1 = time.time()
    print("*********************************************************")
    print("Retrieving previous U-net " + unet_path) 
-   
-   ct_files = glob(ct_path)
-   ct_files.sort()
 
    model = create_unet_like_model(
        number_input_features=1,
@@ -257,7 +249,7 @@ def unet_lesion_predict(ct_prepro_list,
    deepVoxNet = DeepVoxNet(model, center_sampling=center_sampling)
 
    # Testing data loaders
-   full_testing_inputLoader = sampling.ImageLoader(ct_prepro_list)
+   full_testing_inputLoader = sampling.ImageLoader(image_prepro)
 
    # X creator
    full_testing_x_creator = sampling.Concat([
@@ -270,33 +262,28 @@ def unet_lesion_predict(ct_prepro_list,
    else:
       full_testing_sampler = sampling.ForcedUniformCoordinateSampler(full_testing_inputLoader)
 
-   dummy = [os.path.basename(p[:-1]) for p in ct_files]
-   dummy = [p + "_pred_median" for p in dummy]
-   dummy = [os.path.join(out_path, p) for p in dummy]
-   test_output_paths = dummy
-   cnn_pred_median_list = []
-   for subject_id, test_output_path in enumerate(test_output_paths):
-       print('segmenting ' + os.path.basename(ct_files[subject_id][:-1]) +
-             ' ==> ' + os.path.basename(test_output_path))
-       if not save_output:
-          test_output_path = None
-       cnn_pred_median = deepVoxNet.predict(
-                           x_creator=full_testing_x_creator,
-                           sampler=full_testing_sampler,
-                           subject_id=subject_id,
-                           out_path=test_output_path,
-                           verbose=True,
-                           batch_size=1,
-                           auto_recalibration=False,
-                           stack_recalibrated=False,
-                           output_layer_idx=[0],
-                           include_output_layer_name_in_out_path=False,
-                           auto_return_first_only=True
-                         )
-       cnn_pred_median_list.append(cnn_pred_median)
+   dummy = os.path.basename(input_data) + "_cnn_output_lesions.nii" 
+   test_output_path = os.path.join(out_path, dummy)
+   print('segmenting ' + input_data +
+         ' ==> ' + os.path.basename(test_output_path))
+   if not save_output:
+      test_output_path = None
+   cnn_pred_median = deepVoxNet.predict(
+                       x_creator=full_testing_x_creator,
+                       sampler=full_testing_sampler,
+                       subject_id=subject_id,
+                       out_path=test_output_path,
+                       verbose=True,
+                       batch_size=1,
+                       auto_recalibration=False,
+                       stack_recalibrated=False,
+                       output_layer_idx=[0],
+                       include_output_layer_name_in_out_path=False,
+                       auto_return_first_only=True
+                     )
 
    print("The total time for CNN lesion prediction is {:.2f} s".format(time.time() - start_time_1))
-   return cnn_pred_median_list
+   return cnn_pred_median
 
 def crop_ct_image(ct_vol,              #3d numpy array in LPS orientation
                   voxsize_ct,
@@ -964,7 +951,7 @@ def cnn_lesion_pred_postprocess(cnn_pred,
 #--------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------
 
-def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel, LesionsModel, seg_liver = False, seg_lesion = False, save_nifti = False, input_nifti = False, Modality = None):
+def CNN_liver_lesion_seg_CT_MR_main(input_data , liver_seg_dir, WholeLiverModel, LesionsModel, seg_liver = False, seg_lesion = False, save_nifti = False, input_nifti = False, Modality = None):
 
   """
   the main function for CNN liver lesions segmentation
@@ -972,7 +959,7 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
   Parameters 
   -----------
 
-  process_dir ... directory containing the dicom files of the input volume
+  input_data  ... a directory containing the DICOM files of an image or the NIFTI file name of an image.
   
   liver_seg_dir ... directory containing the dicom files of the whole liver RTstruct
                       if None, this RTstruct will be generated by the WholeLiverModel
@@ -993,7 +980,7 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
   
   """   
 
-  logger = setup_logger('CNN_logger', Path(process_dir).parent / 'CNN_processing.log')
+  logger = setup_logger('CNN_logger', Path(input_data).parent / 'CNN_processing.log')
 
   # the voxel size of the images before imported into the trained model for liver seg    
   with h5py.File(WholeLiverModel, 'r') as f_liver_model:
@@ -1002,8 +989,8 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
   with h5py.File(LesionsModel, 'r') as f_lesions_model:
     target_voxsize_lesion = np.array(list(f_lesions_model['header/voxel_size']))
 
-  output_series_liver_seg_path = os.path.dirname(process_dir)
-  output_series_lesion_seg_path = os.path.dirname(process_dir)
+  output_series_liver_seg_path = os.path.dirname(input_data)
+  output_series_lesion_seg_path = os.path.dirname(input_data)
   
   #--------------------------------------------------------------------------------------------
 
@@ -1014,12 +1001,12 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
   
   logger.info(f'')
   logger.info(f'======================================================')
-  logger.info(f'processing: {process_dir}')
+  logger.info(f'processing: {input_data}')
   logger.info(f'')
 
   # read dcm files
   if not input_nifti:
-    dcm_files = sorted(glob(os.path.join(process_dir,'*.dcm')))
+    dcm_files = sorted(glob(os.path.join(input_data,'*.dcm')))
     
     # check whether all dicom files contain pixel data
     # if e.g. presentation state files are present (from Philips MR). the reader will fail
@@ -1033,7 +1020,7 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
     except:
       # if the dicom reading fails with an error we move the dicom directory
       # to the fail dir and continue with the next data set
-      logger.error(f'Failed to read dicoms from {process_dir}')
+      logger.error(f'Failed to read dicoms from {input_data}')
     
     ###############################################################################
     # if data reading was successfull the real processing starts here
@@ -1046,15 +1033,15 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
       Modality = img_dcm.firstdcmheader.Modality     
       affine_lps = img_dcm.affine      
     except:
-      logger.error(f'Failed to read dicoms from {process_dir}')
+      logger.error(f'Failed to read dicoms from {input_data}')
   else:
-    img_nii = nib.load(process_dir)
+    img_nii = nib.load(input_data)
     img_nii = nib.as_closest_canonical(img_nii)
     img_vol = img_nii.get_data()  
     # transform the volume to LPS
     img_vol = np.flip(img_vol, [0,1])
     voxsize_img = img_nii.header['pixdim'][1:4]
-    # read the affine
+    # read the affine and transform the RAS affine to LPS
     affine_lps       = img_nii.affine.copy()
     affine_lps[0,-1] = (-1 * img_nii.affine @ np.array([img_vol.shape[0]-1,0,0,1]))[0]
     affine_lps[1,-1] = (-1 * img_nii.affine @ np.array([0,img_vol.shape[1]-1,0,1]))[1]
@@ -1074,7 +1061,7 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
   start_time_0 = time.time()
   
   start_time_tmp = time.time()
-  imgname = os.path.basename(process_dir)
+  imgname = os.path.basename(input_data)
   logger.info(f'{imgname}')
   
   # start to run CNN liver segmentation first to obtain liver mask
@@ -1150,9 +1137,9 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
     segment_size = [163, 136, 136]
     weight_decay = 1e-5
     center_sampling=True
-    cnn_pred_median_list = unet_liver_predict(img_prepro_list,
+    cnn_pred_median = unet_liver_predict(img_prepro_list,
                                       segment_size,
-                                      process_dir,
+                                      input_data,
                                       WholeLiverModel,
                                       output_series_liver_seg_path,
                                       weight_decay    = 1e-5,
@@ -1165,7 +1152,7 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
     
     start_time_2 = time.time()
     
-    cnn_pred_median = np.squeeze(cnn_pred_median_list[0])
+    cnn_pred_median = np.squeeze(cnn_pred_median)
     
     logger.info(f'{imgname}')
     
@@ -1300,9 +1287,9 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
     segment_size = [92,84,42]
     weight_decay = 1e-5
     center_sampling=False
-    cnn_lesion_pred_median_list = unet_lesion_predict(img_prepro_lesion_list,
+    cnn_lesion_pred_median = unet_lesion_predict(img_prepro_lesion_list,
                                       segment_size,
-                                      process_dir,
+                                      input_data,
                                       LesionsModel,
                                       output_series_lesion_seg_path,
                                       weight_decay    = 1e-5,
@@ -1315,7 +1302,7 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
     
     start_time_2 = time.time()
     
-    cnn_lesion_pred_median = np.squeeze(cnn_lesion_pred_median_list[0])
+    cnn_lesion_pred_median = np.squeeze(cnn_lesion_pred_median)
     
     logger.info(f'{imgname}')
     
