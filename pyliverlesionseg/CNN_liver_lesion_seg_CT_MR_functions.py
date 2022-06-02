@@ -13,7 +13,6 @@ import logging
 from glob import glob
 from fnmatch import fnmatch
 import pydicom
-import csv
 import h5py
 
 import numpy as np
@@ -1135,12 +1134,6 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
       # if the dicom modality is not CT nor MR, we move the dicom directory
       # to the fail dir and continue with the next data set
       logger.error(f'Dicom modality {Modality} is not supported')
-    
-    # save the bounding box in a csv file
-    with open(os.path.join(output_series_liver_seg_path, imgname + '_bbox.csv'), 'w') as csvfile:
-       writer = csv.writer(csvfile) 
-       writer.writerow(['x-start', 'x-stop', 'y-start', 'y-stop', 'z-start', 'z-stop'])
-       writer.writerow([bbox[0].start, bbox[0].stop, bbox[1].start, bbox[1].stop, bbox[2].start, bbox[2].stop])
      
     img_vol_cropped = img_vol[bbox]
     
