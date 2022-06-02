@@ -1230,7 +1230,7 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
       affine_ras[1,-1] = (-1 * affine_lps @ np.array([0,img_vol.shape[1]-1,0,1]))[1]
     
       nib.save(nib.Nifti1Image(np.flip(cnn_liver_pred_pad,[0,1]), affine_ras), 
-                               os.path.join(output_series_liver_seg_path, imgname + '_cnn_pred_liver.nii'))
+                               os.path.join(output_series_liver_seg_path, imgname + '_cnn_pred_liver.nii.gz'))
     
     logger.info('The total time for postprocessing is {:.2f} s'.format(time.time() - start_time_2))
     logger.info('The total processing time is {:.2f} s'.format(time.time() - start_time_0))
@@ -1367,7 +1367,7 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
       affine_ras[1,-1] = (-1 * affine_lps @ np.array([0,img_vol.shape[1]-1,0,1]))[1]
     
       nib.save(nib.Nifti1Image(cnn_lesion_pred_postpro, affine_ras), 
-                               os.path.join(output_series_lesion_seg_path, imgname + '_cnn_pred_liver_lesions.nii'))
+                               os.path.join(output_series_lesion_seg_path, imgname + '_cnn_pred_liver_lesions.nii.gz'))
     
     if not input_nifti:
       if cnn_lesion_pred_postpro.max() > 0:
