@@ -958,33 +958,6 @@ def cnn_lesion_pred_postprocess(cnn_pred,
 
    print(f'The time for postprocessing CNN lesion seg is {(time.time() - start_time):.2f} s')
    return cnn_pred_resize
-   
-def move_to_failed_and_cleanup(process_dir, fail_dir, logger):
-  """ move directory to failed archiv and clean up empty parent directories
-
-  Parameters
-  ----------
-
-  process_dir ... dicom directory where processing failed
-
-  fail_dir    ... archiv directory for failed processings
-
-  logger      ... logger to log infos
-  """
-  fdir = os.path.join(fail_dir, os.path.basename(process_dir))
-
-  # if the failed dir already exists, we have to remove it first
-  if os.path.exists(fdir):
-    shutil.rmtree(fdir) 
-
-  shutil.move(process_dir, fdir)
-  logger.info(f'moved input to {fdir}')
-
-  # remove parent dir if it is empty
-  parent_dir = os.path.dirname(process_dir)
-  if (fnmatch(os.path.basename(parent_dir),'20??-??__Studies')) and  (len(os.listdir(parent_dir)) == 0):
-    os.rmdir(parent_dir)
-    logger.info(f'removed empty directory {parent_dir}')
 
 #--------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------
