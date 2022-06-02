@@ -1,6 +1,7 @@
-pyliverlesionseg is a Python framework based on Keras to perform voxel-based liver and lesion segmentation. It is built based on [DeepVoxnet](https://github.com/JeroenBertels/deepvoxnet2), which is a deep learning processing framework for Keras and developed in medical imaging research center (MIRC) of KU Leuven.
-It allows training on segments (i.e. patches, subvolumes) of an image.
-Segments are identified by the subject_id and the coordinate of the center voxel.
+* pyliverlesionseg is a Python framework based on Keras to perform voxel-based liver and lesion segmentation. It is built based on [DeepVoxNet](https://github.com/JeroenBertels/deepvoxnet), which is a deep learning processing framework for Keras and developed in medical imaging research center (MIRC) of KU Leuven.<br/>
+* Reference for DeepVoxnet:<br/>
+Robben, D., Bertels, J., Willems, S., Vandermeulen, D., Maes, F., Suetens, P. (2018). DeepVoxNet: voxel‐wise prediction for 3D images. Report No. KUL/ESAT/PSI/1801.<br/>
+* It allows training on segments (i.e. patches, subvolumes) of an image. Segments are identified by the subject_id and the coordinate of the center voxel.
 
 Installation
 ============
