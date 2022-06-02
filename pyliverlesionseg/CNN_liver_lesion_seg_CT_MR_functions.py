@@ -13,7 +13,6 @@ import logging
 from glob import glob
 from fnmatch import fnmatch
 import pydicom
-from pynetdicom import AE, debug_logger, StoragePresentationContexts
 import csv
 import h5py
 
@@ -63,39 +62,6 @@ def setup_logger(name, log_path, level = logging.INFO, formatter = None, mode = 
   logger.addHandler(handler)
 
   return logger
-
-#-------------------------------------------------------------------------
-
-def send_dcm_files_to_mim_server(dcm_file_list, dcm_server_ip = "10.254.40.200", dcm_server_port = 104, logger = None):
-  # Initialise the Application Entity
-  ae = AE()
-  ae.requested_contexts = StoragePresentationContexts
-  
-  assoc = ae.associate(dcm_server_ip, dcm_server_port)
-
-  if assoc.is_established:
-    if logger is not None: logger.info('Association established')
-  
-    # Use the C-STORE service to send the dataset
-    # returns the response status as a pydicom Dataset
-
-    for dcm_file in dcm_file_list:
-      if logger is not None: logger.info(dcm_file)
-      dcm = pydicom.read_file(dcm_file)
-      status = assoc.send_c_store(dcm, originator_aet = 'Fermi')
-  
-      # Check the status of the storage request
-      if status:
-        # If the storage request succeeded this will be 0x0000
-        if logger is not None: logger.info('C-STORE request status: 0x{0:04x}'.format(status.Status))
-      else:
-        if logger is not None: logger.exception('Connection timed out, was aborted or received invalid response')
-  
-    # Release the association
-    assoc.release()
-    if logger is not None: logger.info('Association released')
-  else:
-    if logger is not None: logger.exception('Association rejected, aborted or never connected')
 
 #-------------------------------------------------------------------------
 
@@ -1183,9 +1149,6 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
        writer.writerow(['x-start', 'x-stop', 'y-start', 'y-stop', 'z-start', 'z-stop'])
        writer.writerow([bbox[0].start, bbox[0].stop, bbox[1].start, bbox[1].stop, bbox[2].start, bbox[2].stop])
      
-    # change the permission to 777 such that MIM can read and delete them
-    os.chmod(os.path.join(output_series_liver_seg_path, imgname + '_bbox.csv'), 0o777)
-    
     img_vol_cropped = img_vol[bbox]
     
     logger.info('final shape in 3mm voxels:{}'.format((np.array(img_vol_cropped.shape)*voxsize_img/target_voxsize_liver_2).astype(int)))
@@ -1266,9 +1229,6 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
                                 roidescriptions   = ['liver CNN'],
                                 tags_to_add       = {'SeriesDate':date.today()})
       logger.info(f'wrote RTstruct: {ofile_liver}')
-      # send the rtstruct dicom file to MIM server via pynetdicom
-      send_dcm_files_to_mim_server([ofile_liver], logger = logger)
-      logger.info(f'sent RTstruct to MIM server')  
     
     #save the binary output as nifti file
     if save_nifti or input_nifti:
@@ -1434,9 +1394,6 @@ def CNN_liver_lesion_seg_CT_MR_main(process_dir, liver_seg_dir, WholeLiverModel,
       
         logger.info(f'wrote RTstruct: {ofile}')  
       
-        # send the rtstruct dicom file to MIM server via pynetdicom
-        send_dcm_files_to_mim_server([ofile], logger = logger)
-        logger.info(f'sent RTstruct to MIM server')  
       else:
         logger.info(f'No liver lesions found. Not creating rtstruct dicom.')  
     
