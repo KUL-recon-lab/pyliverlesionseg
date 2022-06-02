@@ -565,10 +565,7 @@ if __name__ == '__main__':
     
     # parsing parameters
     parser = argparse.ArgumentParser()
-    parser.add_argument('--data_path', 
-                    default = "/scratch/leuven/326/vsc32672/DATA/Training_CT_resize_1.5mm_med_3_resize_3mm_radCT/", 
-                    #default = "/scratch/leuven/326/vsc32672/DATA/Training_LITS17_SIRT_tum_mask_bbox_liv_resize_1mm_3mm/",
-                    help = 'data path')
+    parser.add_argument('data_path', help = 'data path')
     parser.add_argument('--data', 
                     default = "Training", 
                     help = 'Using training dataset for model training and validation. "data" can be "Training" or "Testing".')    
