@@ -79,7 +79,7 @@ def unet_liver_predict(image_prepro,
    Parameters 
    -----------
    
-   image_prepro: a list of 3d numpy arrays which contain the preprocessed CT volumes.
+   image_prepro: a 3d numpy arrays which contain the preprocessed CT volume.
    
    segment_size: the output segment size of the trained U-net model.
    
@@ -138,7 +138,7 @@ def unet_liver_predict(image_prepro,
    deepVoxNet = DeepVoxNet(model, center_sampling=center_sampling)
 
    # Testing data loaders
-   full_testing_inputLoader = sampling.ImageLoader(image_prepro)
+   full_testing_inputLoader = sampling.ImageLoader([image_prepro])
 
    # X creator
    full_testing_x_creator = sampling.Concat([
@@ -160,7 +160,7 @@ def unet_liver_predict(image_prepro,
    cnn_pred_median = deepVoxNet.predict(
                        x_creator=full_testing_x_creator,
                        sampler=full_testing_sampler,
-                       subject_id=subject_id,
+                       subject_id=0,
                        out_path=test_output_path,
                        verbose=True,
                        batch_size=1,
@@ -189,7 +189,7 @@ def unet_lesion_predict(image_prepro,
    Parameters 
    -----------
    
-   image_prepro: a list of 3d numpy arrays which contain the preprocessed CT volumes.
+   image_prepro: a 3d numpy arrays which contain the preprocessed CT volume.
    
    segment_size: the output segment size of the trained U-net model.
    
@@ -249,7 +249,7 @@ def unet_lesion_predict(image_prepro,
    deepVoxNet = DeepVoxNet(model, center_sampling=center_sampling)
 
    # Testing data loaders
-   full_testing_inputLoader = sampling.ImageLoader(image_prepro)
+   full_testing_inputLoader = sampling.ImageLoader([image_prepro])
 
    # X creator
    full_testing_x_creator = sampling.Concat([
@@ -271,7 +271,7 @@ def unet_lesion_predict(image_prepro,
    cnn_pred_median = deepVoxNet.predict(
                        x_creator=full_testing_x_creator,
                        sampler=full_testing_sampler,
-                       subject_id=subject_id,
+                       subject_id=0,
                        out_path=test_output_path,
                        verbose=True,
                        batch_size=1,
@@ -1057,7 +1057,6 @@ def CNN_liver_lesion_seg_CT_MR_main(input_data , liver_seg_dir, WholeLiverModel,
   # crop CT/MR images and then median filter and resize the cropped CT images
   ###############################################################################
   
-  img_prepro_list = []
   start_time_0 = time.time()
   
   start_time_tmp = time.time()
@@ -1125,8 +1124,6 @@ def CNN_liver_lesion_seg_CT_MR_main(input_data , liver_seg_dir, WholeLiverModel,
     
     logger.info('The time for preprocessing {} is {:.2f} s'.format(imgname, time.time() - start_time_tmp))
     
-    img_prepro_list.append(img_vol_med)
-    
     logger.info('The total time for preprocessing is {:.2f} s'.format(time.time() - start_time_0))
     
     ############################################################################################################################
@@ -1137,7 +1134,7 @@ def CNN_liver_lesion_seg_CT_MR_main(input_data , liver_seg_dir, WholeLiverModel,
     segment_size = [163, 136, 136]
     weight_decay = 1e-5
     center_sampling=True
-    cnn_pred_median = unet_liver_predict(img_prepro_list,
+    cnn_pred_median = unet_liver_predict(img_vol_med,
                                       segment_size,
                                       input_data,
                                       WholeLiverModel,
@@ -1193,7 +1190,6 @@ def CNN_liver_lesion_seg_CT_MR_main(input_data , liver_seg_dir, WholeLiverModel,
   #============================================= CNN lesion seg ============================================
   #=========================================================================================================
   if seg_lesion:
-    img_prepro_lesion_list = []
     # if liver_seg_dir is None, use CNN liver seg from the previous step
     # if liver_seg_dir is not None, use the liver mask from the doctor
     if liver_seg_dir is None:
@@ -1276,9 +1272,6 @@ def CNN_liver_lesion_seg_CT_MR_main(input_data , liver_seg_dir, WholeLiverModel,
     
     logger.info('The time for preprocessing {} is {:.2f} s'.format(imgname, time.time() - start_time_tmp))
     
-    # the input image of the CNN model for lesion seg needs to be in RAS orientation
-    img_prepro_lesion_list.append(img_mask_liv_crop)
-    
     ############################################################################################################################
     #retrieve the trained CNN model and do predictions on the list of numpy arrays which contain the preprocessed CT volumes
     ############################################################################################################################
@@ -1287,7 +1280,7 @@ def CNN_liver_lesion_seg_CT_MR_main(input_data , liver_seg_dir, WholeLiverModel,
     segment_size = [92,84,42]
     weight_decay = 1e-5
     center_sampling=False
-    cnn_lesion_pred_median = unet_lesion_predict(img_prepro_lesion_list,
+    cnn_lesion_pred_median = unet_lesion_predict(img_mask_liv_crop,
                                       segment_size,
                                       input_data,
                                       LesionsModel,
