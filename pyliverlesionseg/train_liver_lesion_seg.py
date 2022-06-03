@@ -24,7 +24,6 @@ def run(data_path,
         validation_indices,
         inputs,
         outputs,
-        slice_thickness,
         run_folder_name,
         network_architecture_id,
         segment_size,
@@ -97,13 +96,12 @@ def run(data_path,
         parameters["objective_function_weights"] = objective_function_weights = [1 / len(objective_function) for _ in objective_function]
     if mode == "Training":
         assert full_image_testing_appendix is None
-    #name_run = "{}{}".format(name_run, "" if slice_thickness is None else "_{}mm".format(slice_thickness))
 
     ######################################
     # Define input and output data paths #
     ######################################
-    input_paths = [[os.path.join(data_path, data, s, "{}{}.nii".format(input, "" if slice_thickness is None else "_{}mm".format(slice_thickness))) for input in inputs] for s in subjects]
-    output_paths = [[os.path.join(data_path, data, s, "{}{}.nii".format(o, "" if slice_thickness is None else "_{}mm".format(slice_thickness))) for o in outputs] for s in subjects] if data == "Training" else None
+    input_paths = [[os.path.join(data_path, data, s, "{}.nii".format(input)) for input in inputs] for s in subjects]
+    output_paths = [[os.path.join(data_path, data, s, "{}.nii".format(o)) for o in outputs] for s in subjects] if data == "Training" else None
 
     ####################################################
     # Define sampling, input mask and output mask ROIs #
@@ -588,10 +586,6 @@ def main():
                     default = ["GT"],
                     nargs = '+',  
                     help = 'Prefix of the ground truth file name.') 
-    parser.add_argument('--slice_thickness', 
-                    default = 3, 
-                    type = int,
-                    help = 'Slice thickness of the resampled image and ground truth. It is also used as the suffix of the image and ground truth file name')
     parser.add_argument('--run_folder_name', 
                     default = "Runs_liver_seg_output_size_163_136_136", 
                     help = 'Folder for saving the outputs and the trained model parameters.')                    
@@ -719,7 +713,6 @@ def main():
         "validation_indices": list(range(args.validation_indice_range[0], args.validation_indice_range[1])) if len(args.validation_indice_range)>1 else list(range(args.validation_indice_range[0])),
         "inputs": args.inputs,
         "outputs": args.outputs,
-        "slice_thickness": args.slice_thickness,
         "run_folder_name": args.run_folder_name,
         "network_architecture_id": args.network_architecture_id,
         "segment_size": args.segment_size,
