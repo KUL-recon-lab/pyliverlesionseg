@@ -23,19 +23,30 @@ An alternative to install the package (especially for developers) is to clone th
 ---
 
 ### Model prediction for liver segmentation
-* The input image is in DICOM format<br/>
-python predict_liver_lesion_seg.py <data_path> --seg_liver
+* The input image is in DICOM format
+```
+python predict_liver_lesion_seg.py <data_input> --seg_liver
+```
+<data_input> is the directory of input dicom files of the image (CT or MR) or the path of a nifti file (CT or MR) that needs to be defined by the user.
 
-* The input image (e.g. CT) is in NIFTI format<br/>
-python predict_liver_lesion_seg.py <data_path> --seg_liver --input_nifti --Modality CT
-
+* The input image (e.g. CT) is in NIFTI format
+```
+python predict_liver_lesion_seg.py <data_input> --seg_liver --input_nifti --Modality CT
+```
+<data_input> is the directory of input dicom files of the image (CT or MR) or the path of a nifti file (CT or MR) that needs to be defined by the user.
 
 ### Model prediction for lesion segmentation
-* The input image is in DICOM format<br/>
-python predict_liver_lesion_seg.py <data_path> --seg_lesion
+* The input image is in DICOM format
+```
+python predict_liver_lesion_seg.py <data_input> --seg_lesion
+```
+<data_input> is the directory of input dicom files of the image (CT or MR) or the path of a nifti file (CT or MR) that needs to be defined by the user.
 
-* The input image (e.g. CT) is in NIFTI format<br/>
-python predict_liver_lesion_seg.py <data_path> --seg_lesion --input_nifti --Modality CT
+* The input image (e.g. CT) is in NIFTI format
+```
+python predict_liver_lesion_seg.py <data_input> --seg_lesion --input_nifti --Modality CT
+```
+<data_input> is the directory of input dicom files of the image (CT or MR) or the path of a nifti file (CT or MR) that needs to be defined by the user.
 
 ---
 ### File organization of the datasets for CNN training
@@ -54,8 +65,11 @@ There should be a folder (its directory is specified in the positional argument 
   3. The cropped and resampled CT needs to be clipped between -200 HU and 200 HU and normalized through linear mapping to an intensity range of [-0.5, 0.5]. The cropped and resampled MR needs to be clipped between the minimal intensity of the MR and minimum intensity + 0.8 * the intensity range of the MR and normalized through linear mapping to an intensity range of [-0.5, 0.5].
   4. The ground truth liver segmentation should also be cropped by using the bounding box and and resampled to an isotropic voxel size of 3 mm.
 
-* The script for training a CNN for liver segmentation can be run via:<br/>
-python train_liver_lesion_seg.py
+* The script for training a CNN for liver segmentation can be run via:
+```
+python train_liver_lesion_seg.py <data_path>
+```
+<data_path> is the directory of the folder containing training and/or test datasets that needs to be defined by the user.
 
 ### Model training for liver lesion segmentation
 * The input image for the CNN model is in NIFTI format.
@@ -66,8 +80,11 @@ python train_liver_lesion_seg.py
   3. The resampled image is masked by a resampled liver mask and cropped by using the bounding box of the resampled liver mask. The image intensities outside the resampled liver mask is set to -0.5.
   4. The ground truth lesion segmentation should also be resampled to a voxel size of [1 mm, 1 mm, 3 mm] and cropped by using the bounding box of the resampled liver mask.
 
-* The script for training a CNN for lesion segmentation can be run via:<br/>
-python train_liver_lesion_seg.py --data_path <data_path> --nb_subjects 180 --training_indice_range 145 --validation_indice_range 145 180 --run_folder_name Runs_lesion_seg_output_size_92_84_42 --network_architecture_id 2 --segment_size 92 84 42 --no_center_sampling --sgd_batch_size 4 --prediction_batch_size 4 --nb_samples_training 320 --nb_samples_validation 140 --max_number_of_subjects_used_for_training 80 --max_number_of_subjects_used_for_validation 35 --nb_subepochs 5 
+* The script for training a CNN for lesion segmentation can be run via:
+```
+python train_liver_lesion_seg.py <data_path> --nb_subjects 180 --training_indice_range 145 --validation_indice_range 145 180 --run_folder_name Runs_lesion_seg_output_size_92_84_42 --network_architecture_id 2 --segment_size 92 84 42 --no_center_sampling --sgd_batch_size 4 --prediction_batch_size 4 --nb_samples_training 320 --nb_samples_validation 140 --max_number_of_subjects_used_for_training 80 --max_number_of_subjects_used_for_validation 35 --nb_subepochs 5 
+```
+<data_path> is the directory of the folder containing training and/or test datasets that needs to be defined by the user.
 
 ---
 
