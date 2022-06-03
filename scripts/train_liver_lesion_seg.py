@@ -16,8 +16,7 @@ from keras.optimizers import SGD, Adam
 from keras.models import load_model
 
 
-def main(
-        data_path,
+def run(data_path,
         data,
         mode,
         subjects,
@@ -552,11 +551,12 @@ def main(
 
     K.clear_session()
 
+#--------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------
 
-######################
-# Call from terminal #
-######################
-if __name__ == '__main__':
+# function definition needed to define entry_points such that script can be installed
+def main():
     # parsing parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('data_path', help = 'data path')
@@ -755,4 +755,11 @@ if __name__ == '__main__':
         "save_best_model_only": not args.no_save_best_model_only
     }
 
-    main(**parameters)
+    run(**parameters)
+
+#--------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------
+#--------------------------------------------------------------------------------------------------
+
+if __name__ == '__main__':
+  main()
