@@ -951,7 +951,7 @@ def cnn_lesion_pred_postprocess(cnn_pred,
 #--------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------
 
-def CNN_liver_lesion_seg_CT_MR_main(input_data , liver_seg_dir, WholeLiverModel, LesionsModel, seg_liver = False, seg_lesion = False, save_nifti = False, input_nifti = False, Modality = None):
+def cnn_liver_lesion_seg_CT_MR_main(input_data , liver_seg_dir, WholeLiverModel, LesionsModel, seg_liver = False, seg_lesion = False, save_nifti = False, input_nifti = False, Modality = None):
 
   """
   the main function for CNN liver lesions segmentation
