@@ -1,3 +1,21 @@
+import argparse
+import os
+import pickle
+import numpy as np
+import nibabel as nib
+import pyliverlesionseg.sampling as sampling
+import pyliverlesionseg.components.loss as loss
+import pyliverlesionseg.components.metrics as metrics
+import keras.backend as K
+from shutil import copyfile
+from functools import partial, update_wrapper
+from pyliverlesionseg.components.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau, EarlyStopping
+from pyliverlesionseg.general import DeepVoxNet
+from pyliverlesionseg.architectures.unet_generalized import create_unet_like_model
+from keras.optimizers import SGD, Adam
+from keras.models import load_model
+
+
 def main(
         data_path,
         data,
@@ -48,25 +66,6 @@ def main(
     This script is used to train a CNN model for liver or lesion segmentation. The CNN structure is U-net.
     
     """
-    ################################
-    # Import the necessary modules #
-    ################################
-    import os
-    import pickle
-    import numpy as np
-    import nibabel as nib
-    import pyliverlesionseg.sampling as sampling
-    import pyliverlesionseg.components.loss as loss
-    import pyliverlesionseg.components.metrics as metrics
-    import keras.backend as K
-    from shutil import copyfile
-    from functools import partial, update_wrapper
-    from pyliverlesionseg.components.callbacks import ModelCheckpoint, TensorBoard, ReduceLROnPlateau, EarlyStopping
-    from pyliverlesionseg.general import DeepVoxNet
-    from pyliverlesionseg.architectures.unet_generalized import create_unet_like_model
-    from keras.optimizers import SGD, Adam
-    from keras.models import load_model
-
     #########################
     # Do some sanity checks #
     #########################
@@ -558,11 +557,6 @@ def main(
 # Call from terminal #
 ######################
 if __name__ == '__main__':
-
-    import argparse
-    import pickle
-    from ast import literal_eval
-    
     # parsing parameters
     parser = argparse.ArgumentParser()
     parser.add_argument('data_path', help = 'data path')
