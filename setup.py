@@ -23,8 +23,11 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
     python_requires='>=3.6, <3.7',
-    install_requires=['tensorflow==1.12.0',
+    install_requires=['numpy<1.17',
+                      'tensorflow==1.12.0',
                       'keras==2.2.4',
                       'pymirc>=0.27'],
+    entry_points = {'console_scripts' : ['pyliverlesionseg_predict=pyliverlesionseg.predict_liver_lesion_seg:main',
+                                         'pyliverlesionseg_train=pyliverlesionseg.train_liver_lesion_seg:main']},
     include_package_data=True,
 )
