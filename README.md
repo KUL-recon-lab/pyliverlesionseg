@@ -38,6 +38,10 @@ python predict_liver_lesion_seg.py <data_path> --seg_lesion
 python predict_liver_lesion_seg.py <data_path> --seg_lesion --input_nifti --Modality CT
 
 ---
+### File organization of the datasets for CNN training
+The input data need to organized as follows: 
+
+There should be a folder (its directory is specified in the positional argument "data_path") containing one subfolder "Training" for training datasets and/or one subfolder "Testing" for testing datasets. In each subfolder (e.g., "Training"), there should be subfolders "case_0", "case_1", "case_2", ..., where each subfolder contains a pre-processed image in NIFTI format (The file name is specified in the optional argument "inputs") and a pre-processed ground-truth segmentation in NIFTI format (The file name is specified in the optional argument "outputs").
 
 ### Model training for liver segmentation
 * The default parameters of the script 'train_liver_lesion_seg.py' are for CNN liver segmentation training. For CNN lesion segmentation training, new values of some parameters need to be given.

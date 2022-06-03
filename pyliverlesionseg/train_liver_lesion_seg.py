@@ -558,8 +558,8 @@ def run(data_path,
 # function definition needed to define entry_points such that script can be installed
 def main():
     # parsing parameters
-    parser = argparse.ArgumentParser()
-    parser.add_argument('data_path', help = 'data path')
+    parser = argparse.ArgumentParser(description='This script is used to train a U-net model for liver or lesion segmentation. The input data need to organized as follows: there should be a folder (its directory is specified in the positional argument "data_path") containing one subfolder "Training" for training datasets and/or one subfolder "Testing" for testing datasets; in each subfolder (e.g., "Training"), there should be subfolders "case_0", "case_1", "case_2", ..., where each subfolder contains a pre-processed image in NIFTI format (The file name is specified in the optional argument "inputs") and a pre-processed ground-truth segmentation in NIFTI format (The file name is specified in the optional argument "outputs").')
+    parser.add_argument('data_path', help = 'Directory of the folder containing the training and/or test datasets.')
     parser.add_argument('--data', 
                     default = "Training", 
                     help = 'Using training dataset for model training and validation. "data" can be "Training" or "Testing".')    
