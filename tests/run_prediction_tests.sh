@@ -1,6 +1,6 @@
 python ../scripts/predict_liver_lesion_seg.py ../data/CT-test-01/CT --seg_liver --seg_lesion --save_nifti 
 CT_dcm_exit_code=$?
-python predict_liver_lesion_seg.py ../data/MR-test-01/MR --seg_liver --seg_lesion --save_nifti 
+python ../scripts/predict_liver_lesion_seg.py ../data/MR-test-01/MR --seg_liver --seg_lesion --save_nifti 
 MR_dcm_exit_code=$?
 
 python ../scripts/predict_liver_lesion_seg.py ../data/CT-test-02/CT.nii --seg_liver --seg_lesion --save_nifti --Modality CT --input_nifti
