@@ -15,55 +15,57 @@ from pyliverlesionseg.architectures.unet_generalized import create_unet_like_mod
 from keras.optimizers import SGD, Adam
 from keras.models import load_model
 
-
-def run(data_path,
-        data,
-        mode,
-        subjects,
-        training_indices,
-        validation_indices,
-        inputs,
-        outputs,
-        run_folder_name,
-        network_architecture_id,
-        segment_size,
-        center_sampling,
-        sampling_roi,
-        objective_function,
-        objective_function_weights,
-        weight_decay,
-        weighted_loss,
-        clip_input,
-        normalize_input,
-        data_augmentation,
-        optimizer,
-        fixed_learning_rate,
-        reduce_learning_rate_on_plateau,
-        early_stopping,
-        sgd_batch_size,
-        prediction_batch_size,
-        nb_samples_training,
-        nb_samples_validation,
-        max_number_of_subjects_used_for_training,
-        max_number_of_subjects_used_for_validation,
-        nb_epochs,
-        nb_subepochs,
-        nb_runs_per_subepoch,
-        parallel_sample_creation,
-        full_training_testing,
-        full_validation_testing,
-        full_image_testing_appendix,
-        model_paths,
-        load_weights_only,
-        save_weights_only,
-        save_best_model_only
-        ):
+def run(parameters):
 
     """
     
     This script is used to train a CNN model for liver or lesion segmentation. The CNN structure is U-net.
     
     """
+    
+    # extract all parameters from the input dictionary
+    data_path = parameters["data_path"]
+    data = parameters["data"]
+    mode = parameters["mode"]
+    subjects = parameters["subjects"]
+    training_indices = parameters["training_indices"]
+    validation_indices = parameters["validation_indices"]
+    inputs = parameters["inputs"]
+    outputs = parameters["outputs"]
+    run_folder_name = parameters["run_folder_name"]
+    network_architecture_id = parameters["network_architecture_id"]
+    segment_size = parameters["segment_size"]
+    center_sampling = parameters["center_sampling"]
+    sampling_roi = parameters["sampling_roi"]
+    objective_function = parameters["objective_function"]
+    objective_function_weights = parameters["objective_function_weights"]
+    weight_decay = parameters["weight_decay"]
+    weighted_loss = parameters["weighted_loss"]
+    clip_input = parameters["clip_input"]
+    normalize_input = parameters["normalize_input"]
+    data_augmentation = parameters["data_augmentation"]
+    optimizer = parameters["optimizer"]
+    fixed_learning_rate = parameters["fixed_learning_rate"]
+    reduce_learning_rate_on_plateau = parameters["reduce_learning_rate_on_plateau"]
+    early_stopping = parameters["early_stopping"]
+    sgd_batch_size = parameters["sgd_batch_size"]
+    prediction_batch_size = parameters["prediction_batch_size"]
+    nb_samples_training = parameters["nb_samples_training"]
+    nb_samples_validation = parameters["nb_samples_validation"]
+    max_number_of_subjects_used_for_training = parameters["max_number_of_subjects_used_for_training"]
+    max_number_of_subjects_used_for_validation = parameters["max_number_of_subjects_used_for_validation"]
+    nb_epochs = parameters["nb_epochs"]
+    nb_subepochs = parameters["nb_subepochs"]
+    nb_runs_per_subepoch = parameters["nb_runs_per_subepoch"]
+    parallel_sample_creation = parameters["parallel_sample_creation"]
+    full_training_testing = parameters["full_training_testing"]
+    full_validation_testing = parameters["full_validation_testing"]
+    full_image_testing_appendix = parameters["full_image_testing_appendix"]
+    model_paths = parameters["model_paths"]
+    load_weights_only = parameters["load_weights_only"]
+    save_weights_only = parameters["save_weights_only"]
+    save_best_model_only = parameters["save_best_model_only"]
+        
     #########################
     # Do some sanity checks #
     #########################
@@ -748,7 +750,7 @@ def main():
         "save_best_model_only": not args.no_save_best_model_only
     }
 
-    run(**parameters)
+    run(parameters)
 
 #--------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------
