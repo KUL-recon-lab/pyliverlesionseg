@@ -103,7 +103,7 @@ python train_liver_lesion_seg.py <data_path>
 
 * The script for training a CNN for lesion segmentation can be run via:
 ```
-python train_liver_lesion_seg.py <data_path> --nb_subjects 180 --training_indice_range 145 --validation_indice_range 145 180 --run_folder_name Runs_lesion_seg_output_size_92_84_42 --network_architecture_id 2 --segment_size 92 84 42 --no_center_sampling --sgd_batch_size 4 --prediction_batch_size 4 --nb_samples_training 320 --nb_samples_validation 140 --max_number_of_subjects_used_for_training 80 --max_number_of_subjects_used_for_validation 35 --nb_subepochs 5 
+python train_liver_lesion_seg.py <data_path> --nb_subjects 180 --training_index_range 145 --validation_index_range 145 180 --run_folder_name Runs_lesion_seg_output_size_92_84_42 --network_architecture_id 2 --segment_size 92 84 42 --no_center_sampling --sgd_batch_size 4 --prediction_batch_size 4 --nb_samples_training 320 --nb_samples_validation 140 --max_number_of_subjects_used_for_training 80 --max_number_of_subjects_used_for_validation 35 --nb_subepochs 5 
 ```
 <data_path> is the directory of the folder containing training and/or test datasets that needs to be defined by the user.
 
