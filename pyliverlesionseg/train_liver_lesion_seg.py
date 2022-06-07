@@ -15,7 +15,7 @@ from pyliverlesionseg.architectures.unet_generalized import create_unet_like_mod
 from keras.optimizers import SGD, Adam
 from keras.models import load_model
 
-def run(parameters):
+def train(parameters):
 
     """
     
@@ -750,7 +750,7 @@ def main():
         "save_best_model_only": not args.no_save_best_model_only
     }
 
-    run(parameters)
+    train(parameters)
 
 #--------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------
