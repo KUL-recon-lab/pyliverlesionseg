@@ -559,10 +559,10 @@ def run(parameters):
 def main():
     # parsing parameters
     parser = argparse.ArgumentParser(description='This script is used to train a U-net model for liver or lesion segmentation. ')
-    parser.add_argument('data_path', help = 'Directory of the folder containing the training and/or test datasets.')
+    parser.add_argument('data_path', help = 'Directory of the folder containing the training and/or test datasets. The input data need to organized as follows: there should be a folder (its directory is specified in the positional argument "data_path") containing one subfolder "Training" for training datasets and/or one subfolder "Testing" for testing datasets; in each subfolder (e.g., "Training"), there should be subfolders "case_0", "case_1", "case_2", ..., where each subfolder contains a pre-processed image in NIFTI format (The file name is specified in the optional argument "inputs") and a pre-processed ground-truth segmentation in NIFTI format (The file name is specified in the optional argument "outputs"). ')
     parser.add_argument('--data', 
                     default = "Training", 
-                    help = '"data" can be "Training" or "Testing". The input data need to organized as follows: there should be a folder (its directory is specified in the positional argument "data_path") containing one subfolder "Training" for training datasets and/or one subfolder "Testing" for testing datasets; in each subfolder (e.g., "Training"), there should be subfolders "case_0", "case_1", "case_2", ..., where each subfolder contains a pre-processed image in NIFTI format (The file name is specified in the optional argument "inputs") and a pre-processed ground-truth segmentation in NIFTI format (The file name is specified in the optional argument "outputs"). ')    
+                    help = '"data" can be "Training" or "Testing". When "data" is "Training", the CNN is trained with the training datasets. When "data" is "Testing", the CNN predict segmentations on the test datasets.')    
     parser.add_argument('--mode', 
                     default = "Training", 
                     help = 'Status for training or prediction. "mode" can be "Training" or "Testing".')                    
