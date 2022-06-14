@@ -12,9 +12,20 @@
 
 ### Installation
 
-#### Installation from conda-forge or pypi
+#### Installation from conda-forge (recommended)
 
-* TODO (as soon as package is on pypi / conda forge)
+To install create a dedicated virtual conda environment (liverlesionseg) and to install
+```pyliverlesionseg``` from conda-forge, execute:
+
+```
+conda create -n liverlesionseg -c conda-forge pyliverlesionseg
+```
+
+#### Installation from the python package index
+
+```
+pip install pyliverlesionseg
+```
 
 #### Dowloading from github 
 
