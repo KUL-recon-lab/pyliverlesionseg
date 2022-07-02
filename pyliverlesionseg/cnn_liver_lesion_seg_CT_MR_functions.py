@@ -5,6 +5,7 @@ predicting liver segmentation through CNN, post-processing the CNN output, and t
 
 """
 
+import sys
 import os
 import time
 from datetime import date, datetime
@@ -23,6 +24,10 @@ from logging.handlers import TimedRotatingFileHandler
 
 from pathlib import Path
 
+import pydicom
+from pydicom.dataset import FileDataset
+from pynetdicom import AE, StoragePresentationContexts
+
 import pymirc
 import pymirc.fileio     as pymf
 import pymirc.image_operations as pi
@@ -39,7 +44,40 @@ from scipy.signal  import argrelextrema, convolve
 
 #################################################### functions #####################################################################
 
-def setup_logger(name, log_path, level = logging.INFO, formatter = None, mode = 'a'):
+def send_dcm_files_to_server(dcm_file_list, dcm_server_ip, dcm_server_port, logger):
+  # Initialise the Application Entity
+  ae = AE()
+  ae.requested_contexts = StoragePresentationContexts
+  
+  
+  assoc = ae.associate(dcm_server_ip, dcm_server_port)
+  if assoc.is_established:
+    logger.info('Association established')
+  
+    # Use the C-STORE service to send the dataset
+    # returns the response status as a pydicom Dataset
+
+    for dcm_file in dcm_file_list:
+      logger.info(f'sending {dcm_file}')
+      dcm = pydicom.read_file(dcm_file)
+      status = assoc.send_c_store(dcm, originator_aet = 'Fermi')
+  
+      # Check the status of the storage request
+      if status:
+        # If the storage request succeeded this will be 0x0000
+        logger.info('C-STORE request status: 0x{0:04x}'.format(status.Status))
+      else:
+        logger.info('Connection timed out, was aborted or received invalid response')
+  
+    # Release the association
+    assoc.release()
+    logger.info('Association released')
+  else:
+    logger.info('Association rejected, aborted or never connected')
+
+#----------------------------------------------------------------------------------------------------------------
+
+def setup_logger(log_path, name = 'logger', level = logging.INFO, formatter = None, mode = 'a'):
   """ wrapper function to setup a file logger with some usefule properties (format, file replacement ...)
   """
 
@@ -48,19 +86,24 @@ def setup_logger(name, log_path, level = logging.INFO, formatter = None, mode = 
     log_path.touch() 
 
   if formatter is None:
-    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s', datefmt = '%m/%d/%Y %I:%M:%S %p')
+    formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s', datefmt = '%Y/%d/%m %I:%M:%S %p')
 
-  #handler = logging.FileHandler(log_file, mode = mode)        
+  lg = logging.getLogger(name)
+  lg.setLevel(level)
+  lg.handlers = []
+
+  # log to file  
   handler = TimedRotatingFileHandler(filename = log_path, when = 'D', interval = 7, backupCount = 4, 
                                      encoding = 'utf-8', delay = False)
-
   handler.setFormatter(formatter)
- 
-  logger = logging.getLogger(name)
-  logger.setLevel(level)
-  logger.addHandler(handler)
+  lg.addHandler(handler)
 
-  return logger
+  # log to stdout as well
+  streamHandler = logging.StreamHandler(sys.stdout)
+  streamHandler.setFormatter(formatter)
+  lg.addHandler(streamHandler)
+
+  return lg
 
 #-------------------------------------------------------------------------
 
@@ -132,7 +175,8 @@ def unet_liver_predict(image_prepro,
                         mask_output=False,
                         l2_reg=weight_decay or 0.0
                     )
-                    
+
+
    model.load_weights(unet_path)   
    input_segmentsize = model.input_shape[1:4]        
    deepVoxNet = DeepVoxNet(model, center_sampling=center_sampling)
@@ -951,7 +995,17 @@ def cnn_lesion_pred_postprocess(cnn_pred,
 #--------------------------------------------------------------------------------------------------------------
 #--------------------------------------------------------------------------------------------------------------
 
-def cnn_liver_lesion_seg_CT_MR_main(input_data , liver_seg_dir, WholeLiverModel, LesionsModel, seg_liver = False, seg_lesion = False, save_nifti = False, input_nifti = False, Modality = None):
+def cnn_liver_lesion_seg_CT_MR_main(input_data , 
+                                    liver_seg_dir, 
+                                    WholeLiverModel, 
+                                    LesionsModel, 
+                                    seg_liver         = False, 
+                                    seg_lesion        = False, 
+                                    save_nifti        = False, 
+                                    input_nifti       = False, 
+                                    Modality          = None, 
+                                    logger            = None,
+                                    dcm_server_params = None):
 
   """
   the main function for CNN liver lesions segmentation
@@ -959,39 +1013,51 @@ def cnn_liver_lesion_seg_CT_MR_main(input_data , liver_seg_dir, WholeLiverModel,
   Parameters 
   -----------
 
-  input_data  ... a directory containing the DICOM files of an image or the NIFTI file name of an image.
+  input_data        ... str 
+                        a directory containing the DICOM files of an image or the NIFTI file name of an image.
   
-  liver_seg_dir ... directory containing the dicom files of the whole liver RTstruct
-                      if None, this RTstruct will be generated by the WholeLiverModel
-                      
-  WholeLiverModel ... name of the model for the whole liver segmentation (h5 file)
+  liver_seg_dir     ... str 
+                        directory containing the dicom files of the whole liver RTstruct
+                        if None, this RTstruct will be generated by the WholeLiverModel
+                        
+  WholeLiverModel   ... str 
+                        absolute path off the model for the whole liver segmentation (h5 file)
   
-  LesionsModel ... name of the model for the liver lesions segmentation (h5 file)
+  LesionsModel      ... str 
+                        absolute path of the model for the liver lesions segmentation (h5 file)
   
-  seg_liver ... boolean, default = False. Whether to segment liver using CNN.
+  seg_liver         ... boolean 
+                        default = False. Whether to segment liver using CNN.
   
-  seg_lesion ... boolean, default = False. Whether to segment lesions using CNN.
+  seg_lesion        ... boolean 
+                        default = False. Whether to segment lesions using CNN.
   
-  save_nifti ... boolean, default = False. Whether to save the CNN segmentation as nifti file
+  save_nifti        ... boolean, default = False. 
+                        Whether to save the CNN segmentation as nifti file
   
-  input_nifti ... boolean, default = False. If true, the input image is in NIFTI format. If false, the input image is in DICOM format.
+  input_nifti       ... boolean, default = False.  
+                        If true, the input image is in NIFTI format. If false, the input image is in DICOM format.
   
-  Modality ... 'CT' or 'MR', default = None. When input_nifti is true, Modality has to be given.
-  
+  Modality          ... str 
+                        'CT' or 'MR', default = None. When input_nifti is true, Modality has to be given.
+
+  logger            ... logger from logging module 
+                        to log information
+
+  dcm_server_params ... tuple (string, int)
+                        containing the IP adress and port of the dicom server where the output RTstructs
+                        are send to (only for dicom input).
   """   
 
-  logger = setup_logger('CNN_logger', Path(input_data).parent / 'CNN_processing.log')
+  if logger is None:
+    logger = setup_logger(Path(input_data).parent / 'CNN_processing.log', name = 'CNN_logger')
 
   # the voxel size of the images before imported into the trained model for liver seg    
   with h5py.File(WholeLiverModel, 'r') as f_liver_model:
     target_voxsize_liver = np.array(list(f_liver_model['header/voxel_size']))
-  #the voxel size of the images before imported into the trained model for lesion seg
-  with h5py.File(LesionsModel, 'r') as f_lesions_model:
-    target_voxsize_lesion = np.array(list(f_lesions_model['header/voxel_size']))
 
   output_series_liver_seg_path = os.path.dirname(input_data)
-  output_series_lesion_seg_path = os.path.dirname(input_data)
-  
+
   #--------------------------------------------------------------------------------------------
 
   target_voxsize_liver_1 = target_voxsize_liver / 2.
@@ -1134,6 +1200,7 @@ def cnn_liver_lesion_seg_CT_MR_main(input_data , liver_seg_dir, WholeLiverModel,
     segment_size = [163, 136, 136]
     weight_decay = 1e-5
     center_sampling=True
+
     cnn_pred_median = unet_liver_predict(img_vol_med,
                                       segment_size,
                                       input_data,
@@ -1172,6 +1239,9 @@ def cnn_liver_lesion_seg_CT_MR_main(input_data , liver_seg_dir, WholeLiverModel,
                                 roidescriptions   = ['liver CNN'],
                                 tags_to_add       = {'SeriesDate':date.today()})
       logger.info(f'wrote RTstruct: {ofile_liver}')
+
+      if dcm_server_params is not None:
+        send_dcm_files_to_server([ofile_liver], dcm_server_params[0], dcm_server_params[1], logger)
     
     #save the binary output as nifti file
     if save_nifti or input_nifti:
@@ -1190,6 +1260,12 @@ def cnn_liver_lesion_seg_CT_MR_main(input_data , liver_seg_dir, WholeLiverModel,
   #============================================= CNN lesion seg ============================================
   #=========================================================================================================
   if seg_lesion:
+    #the voxel size of the images before imported into the trained model for lesion seg
+    with h5py.File(LesionsModel, 'r') as f_lesions_model:
+      target_voxsize_lesion = np.array(list(f_lesions_model['header/voxel_size']))
+    output_series_lesion_seg_path = os.path.dirname(input_data)
+  
+
     # if liver_seg_dir is None, use CNN liver seg from the previous step
     # if liver_seg_dir is not None, use the liver mask from the doctor
     if liver_seg_dir is None:
@@ -1332,6 +1408,9 @@ def cnn_liver_lesion_seg_CT_MR_main(input_data , liver_seg_dir, WholeLiverModel,
                                                        'SeriesTime':datetime.now().time()})
       
         logger.info(f'wrote RTstruct: {ofile}')  
+
+        if dcm_server_params is not None:
+          send_dcm_files_to_server([ofile], dcm_server_params[0], dcm_server_params[1], logger)
       
       else:
         logger.info(f'No liver lesions found. Not creating rtstruct dicom.')  
