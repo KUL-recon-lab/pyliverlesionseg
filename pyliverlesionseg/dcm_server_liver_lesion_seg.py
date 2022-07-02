@@ -13,14 +13,14 @@ warnings.filterwarnings("ignore", message=r"Passing", category=FutureWarning)
 
 from pydicom.dataset import FileDataset
 from pynetdicom import AE, evt
-from pynetdicom.sop_class import CTImageStorage, MRImageStorage, VerificationSOPClass
+from pynetdicom.sop_class import CTImageStorage, MRImageStorage, RTStructureSetStorage, VerificationSOPClass
 
 import pyliverlesionseg as pyls
 
 #----------------------------------------------------------------------------------------------------------------
-class LiverSegDicomProcessor:
+class LiverLesionSegDicomProcessor:
   """
-  minimal dicom server that listens for incoming CT/MR dicoms, triggers CNN liver segmentation, and sends
+  minimal dicom server that listens for incoming CT/MR dicoms, triggers CNN liver lesion segmentation, and sends
   output RTstruct back to sender
 
   Currently we rely on the fact that all 2D dicom files of a dicom series are sent between an
@@ -52,14 +52,18 @@ class LiverSegDicomProcessor:
 
   mode_name           ... str
                           abs path of the trained CNN model used for liver segmentation
+
+  lesion_mode_name    ... str
+                          abs path of the trained CNN model used for liver lesion segmentation
   """
-  def __init__(self, storage_dir         = Path.home() / 'liver_seg_dicom_in', 
-                     processing_dir      = Path.home() / 'liver_seg_dicom_process',
+  def __init__(self, storage_dir         = Path.home() / 'liver_lesion_seg_dicom_in', 
+                     processing_dir      = Path.home() / 'liver_lesion_seg_dicom_process',
                      sending_ip          = None, 
                      sending_port        = 104, 
                      cleanup_process_dir = True, 
                      timeout             = 60,
-                     model_name          = None):
+                     model_name          = None,
+                     lesion_model_name   = None):
 
     self.storage_dir         = storage_dir.resolve()
     self.processing_dir      = processing_dir.resolve()
@@ -72,6 +76,11 @@ class LiverSegDicomProcessor:
       self.model_name = str(Path(pyls.__file__).parent / 'trained_models' / 'model_unet_ct_mr_liv_seg_resize_1.5mm_med_3_resize_3mm_20201011_dice_loss_val_binary_dice_mean.hdf5')
     else:
       self.model_name = model_name
+
+    if lesion_model_name is None:
+      self.lesion_model_name = str(Path(pyls.__file__).parent / 'trained_models' / 'model_unet_ct_mr_lesion_seg_resize_1mm_1mm_3mm_20220207_dice_loss_val_binary_dice_mean.hdf5')
+    else:
+      self.lesion_model_name = lesion_model_name
 
     self.dcm_log_file = self.storage_dir / 'dicom_process.log'
     self.logger       = pyls.setup_logger(self.dcm_log_file, name = 'dicom_io_logger')
@@ -112,7 +121,12 @@ class LiverSegDicomProcessor:
     # Save the dataset using the SOP Instance UID as the filename
     self.last_ds = FileDataset(self.last_dcm_fname, event.dataset, file_meta = event.file_meta)
     self.last_ds.save_as(self.last_dcm_fname, write_like_original = False)
-  
+
+    # if Modality is RTstruct, save the referenced series UID as txt file
+    if self.last_ds.Modality == 'RTSTRUCT':
+      refSeriesUID = self.last_ds.ReferencedFrameOfReferenceSequence[0].RTReferencedStudySequence[0].RTReferencedSeriesSequence[0].SeriesInstanceUID
+      (self.last_dcm_storage_dir / f'{refSeriesUID}.rtxt').touch()
+
     # Return a 'Success' status
     return 0x0000
   
@@ -122,7 +136,7 @@ class LiverSegDicomProcessor:
   
   def handle_released(self,event):
     self.logger.info('released')
-
+    # start processing here
     if self.last_dcm_storage_dir is not None:
       self.logger.info('')
       self.logger.info(f'series desc  ..: {self.last_ds.SeriesDescription}')
@@ -134,35 +148,57 @@ class LiverSegDicomProcessor:
       self.logger.info(f'peer port    ..: {self.last_peer_port}')    
       self.logger.info('')
 
+      # if the incoming dicom data is CT or MR, we check wether an RTstruct defined
+      # on that series exist 
+
       if self.last_ds.Modality == 'CT' or self.last_ds.Modality == 'MR':
-        self.logger.info('submitting to processing queue')
-        try:
-          self.logger.info(f'image input {self.last_dcm_storage_dir}')
+        rtxt_files = list(self.last_dcm_storage_dir.parent.rglob(f'{self.last_ds.SeriesInstanceUID}.rtxt'))
 
-          # move input dicom series into process dir
-          process_dir = self.processing_dir / f'{datetime.now().strftime("%Y%m%d_%H%M%S")}_{self.last_dcm_storage_dir.parent.name}'
-          process_dir.mkdir(exist_ok = True, parents = True)
-        
-          shutil.move(self.last_dcm_storage_dir, process_dir / 'image') 
-          self.logger.info(f'moving {self.last_dcm_storage_dir} to {process_dir / "image"}')
+        if len(rtxt_files) > 0:
+          # corresponding liver RTstruct file exists, submit processing job to queue
+          self.logger.info('submitting to processing queue')
+          try:
+            self.logger.info(f'image input {self.last_dcm_storage_dir}')
+            self.logger.info(f'RTstruct input {rtxt_files[0].parent}')
 
-          # check if study dir is empty after moving series, and delete if it is
-          if not any(Path(self.last_dcm_storage_dir.parent).iterdir()):
-            shutil.rmtree(self.last_dcm_storage_dir.parent)
-            self.logger.info(f'removed empty dir {self.last_dcm_storage_dir.parent}')
+            # move input dicom series into process dir
+            process_dir = self.processing_dir / f'{datetime.now().strftime("%Y%m%d_%H%M%S")}_{self.last_dcm_storage_dir.parent.name}'
+            process_dir.mkdir(exist_ok = True, parents = True)
+          
+            shutil.move(self.last_dcm_storage_dir, process_dir / 'image') 
+            self.logger.info(f'moving {self.last_dcm_storage_dir} to {process_dir / "image"}')
 
-          # submit new processing job to the processing queue
-          if self.sending_ip is None:
-            peer_address =  self.last_peer_address
-          else:
-            peer_address = self.sending_ip
+            shutil.move(rtxt_files[0].parent, process_dir / 'whole_liver_rtstruct') 
+            self.logger.info(f'moving {rtxt_files[0].parent} to {process_dir / "whole_liver_rtstruct"}') 
 
-          self.processing_queue.put((process_dir, peer_address, self.last_ds.Modality))
-          self.logger.info(f'adding to process queue {process_dir}')
-          self.logger.info(f'current queue {list(self.processing_queue.queue)}')
+            # check if study dir is empty after moving series, and delete if it is
+            if not any(Path(self.last_dcm_storage_dir.parent).iterdir()):
+              shutil.rmtree(self.last_dcm_storage_dir.parent)
+              self.logger.info(f'removed empty dir {self.last_dcm_storage_dir.parent}')
 
-        except:
-          self.logger.error('submitting processing to queue failed')  
+            # submit new processing job to the processing queue
+            if self.sending_ip is None:
+              peer_address =  self.last_peer_address
+            else:
+              peer_address = self.sending_ip
+
+            self.processing_queue.put((process_dir, peer_address, self.last_ds.Modality))
+            self.logger.info(f'adding to process queue {process_dir}')
+            self.logger.info(f'current queue {list(self.processing_queue.queue)}')
+
+          except:
+            self.logger.error('submitting processing to queue failed')  
+        else:
+          # for the given CT or MR series, no whole liver rtstruct exists such that we cannot
+          # run the liver segmentation and delete the series
+          if self.last_dcm_storage_dir is not None:
+            shutil.rmtree(self.last_dcm_storage_dir)
+            self.logger.error(f'no corresponding rtstruct found. removing {self.last_dcm_storage_dir}')
+
+            if not any(Path(self.last_dcm_storage_dir.parent).iterdir()):
+              shutil.rmtree(self.last_dcm_storage_dir.parent)
+              self.logger.info(f'removed empty dir {self.last_dcm_storage_dir.parent}')
+           
 
     # reset all information about the last valid storage
     # otherwise an unvalid storage request (e.g. PT) will have the wrong last storage information
@@ -188,11 +224,11 @@ class LiverSegDicomProcessor:
 
         try:
           pyls.cnn_liver_lesion_seg_CT_MR_main(str(process_dir / 'image'), 
-                                               None, 
+                                               str(process_dir / 'whole_liver_rtstruct'),
                                                self.model_name,
-                                               None, 
-                                               seg_liver         = True, 
-                                               seg_lesion        = False, 
+                                               self.lesion_model_name,
+                                               seg_liver         = False, 
+                                               seg_lesion        = True, 
                                                save_nifti        = True, 
                                                input_nifti       = False, 
                                                Modality          = modality,
@@ -215,12 +251,12 @@ class LiverSegDicomProcessor:
 
 #------------------------------------------------------------------------------------------------
 def main():
-  parser = argparse.ArgumentParser(description = 'dicom server for receiving, processing and sending of CT and MR CNN liver segmentations')
+  parser = argparse.ArgumentParser(description = 'dicom server for receiving, processing and sending of CT and MR CNN liver lesion segmentations')
   parser.add_argument('--dcm_storage_dir', default = None,   help = 'storage directory for incoming dicoms')
   parser.add_argument('--dcm_process_dir', default = None,   help = 'processing directory for valid dicoms')
   parser.add_argument('--no_cleanup', action = 'store_true', help = 'do not remove processed dicom files')
   parser.add_argument('--AE', default = 'Liver-Seg', help = 'AE title of dicom server')
-  parser.add_argument('--listening_port', default = 11112, type = int, 
+  parser.add_argument('--listening_port', default = 11113, type = int, 
                       help = 'port where dicom server is listening')
   parser.add_argument('--sending_ip', default = None, 
            help = 'IP of peer to use for sending of output dicom files. If None results are send back to sender.')
@@ -228,16 +264,18 @@ def main():
                       help = 'port of peer to use for sending of output dicom files')
   parser.add_argument('--model_name', default = None, 
            help = 'absolute path of pretrained model for liver segmentation')
+  parser.add_argument('--lesion_model_name', default = None, 
+           help = 'absolute path of pretrained model for liver lesion segmentation')
 
   args = parser.parse_args()
   
   if args.dcm_storage_dir is None:
-    storage_dir = Path.home() / 'liver_seg_dicom_in'
+    storage_dir = Path.home() / 'liver_lesion_seg_dicom_in'
   else:
     storage_dir = Path(args.storage_dir)
 
   if args.dcm_process_dir is None:
-    process_dir = Path.home() / 'liver_seg_dicom_process'
+    process_dir = Path.home() / 'liver_lesion_seg_dicom_process'
   else:
     process_dir = Path(args.process_dir)
 
@@ -248,12 +286,13 @@ def main():
   if not process_dir.exists(): 
     process_dir.mkdir(exist_ok = True, parents = True)
 
-  dcm_listener = LiverSegDicomProcessor(storage_dir         = storage_dir, 
-                                        processing_dir      = process_dir,
-                                        cleanup_process_dir = (not args.no_cleanup),
-                                        sending_ip          = args.sending_ip,
-                                        sending_port        = args.sending_port,
-                                        model_name          = args.model_name)
+  dcm_listener = LiverLesionSegDicomProcessor(storage_dir         = storage_dir, 
+                                              processing_dir      = process_dir,
+                                              cleanup_process_dir = (not args.no_cleanup),
+                                              sending_ip          = args.sending_ip,
+                                              sending_port        = args.sending_port,
+                                              model_name          = args.model_name,
+                                              lesion_model_name   = args.lesion_model_name)
   
   handlers = [(evt.EVT_C_STORE,  dcm_listener.handle_store), 
               (evt.EVT_RELEASED, dcm_listener.handle_released),
@@ -266,8 +305,9 @@ def main():
   # Support presentation contexts for all storage SOP Classes
   ae.add_supported_context(CTImageStorage)
   ae.add_supported_context(MRImageStorage)
+  ae.add_supported_context(RTStructureSetStorage)
   ae.add_supported_context(VerificationSOPClass)
-  
+ 
   # Start listening for incoming association requests
   ae.start_server((socket.gethostbyname(socket.gethostname()), args.listening_port), 
                    evt_handlers = handlers, block = True)
