@@ -29,6 +29,8 @@ setuptools.setup(
                       'pymirc>=0.27',
                       'pynetdicom>=1.5'],
     entry_points = {'console_scripts' : ['pyliverlesionseg_predict=pyliverlesionseg.predict_liver_lesion_seg:main',
-                                         'pyliverlesionseg_train=pyliverlesionseg.train_liver_lesion_seg:main']},
+                                         'pyliverlesionseg_train=pyliverlesionseg.train_liver_lesion_seg:main',
+                                         'pyliverlesionseg_liver_seg_service=pyliverlesionseg.dcm_server_liver_seg:main',
+                                         'pyliverlesionseg_liver_lesion_seg_service=pyliverlesionseg.dcm_server_liver_lesion_seg:main']},
     include_package_data=True,
 )
