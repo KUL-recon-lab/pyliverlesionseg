@@ -1,3 +1,4 @@
+#TODO input arg for liver model / receiving IP
 import sys
 import shutil
 import time
@@ -36,6 +37,10 @@ class LiverSegDicomProcessor:
   processing_dir ... pathlib.Path
                      master directory used to process valid input dicoms
 
+  sending_ip     ... str or None
+                     IP of the peer used to send back processed results.
+                     If None, the IP of the sender is used.
+
   sending_port   ... int
                      port of peer used to send back processed rtstructs
 
@@ -50,6 +55,7 @@ class LiverSegDicomProcessor:
   """
   def __init__(self, storage_dir         = Path.home() / 'liver_seg_dicom_in', 
                      processing_dir      = Path.home() / 'liver_seg_dicom_process',
+                     sending_ip          = None, 
                      sending_port        = 104, 
                      cleanup_process_dir = True, 
                      timeout             = 60,
@@ -57,6 +63,7 @@ class LiverSegDicomProcessor:
 
     self.storage_dir         = storage_dir.resolve()
     self.processing_dir      = processing_dir.resolve()
+    self.sending_ip          = sending_ip 
     self.sending_port        = sending_port 
     self.cleanup_process_dir = cleanup_process_dir
     self.timeout             = timeout
@@ -148,7 +155,12 @@ class LiverSegDicomProcessor:
             self.logger.info(f'removed empty dir {self.last_dcm_storage_dir.parent}')
 
           # submit new processing job to the processing queue
-          self.processing_queue.put((process_dir, self.last_peer_address, self.last_ds.Modality))
+          if self.sending_ip is None:
+            peer_address =  self.last_peer_address
+          else:
+            peer_address = self.sending_ip
+
+          self.processing_queue.put((process_dir, peer_address, self.last_ds.Modality))
           self.logger.info(f'adding to process queue {process_dir}')
           self.logger.info(f'current queue {list(self.processing_queue.queue)}')
 
@@ -209,8 +221,12 @@ def main():
   parser.add_argument('--AE', default = 'Liver-Seg', help = 'AE title of dicom server')
   parser.add_argument('--listening_port', default = 11112, type = int, 
                       help = 'port where dicom server is listening')
+  parser.add_argument('--sending_ip', default = None, 
+           help = 'IP of peer to use for sending of output dicom files. If None results are send back to sender.')
   parser.add_argument('--sending_port', default = 104, type = int, 
                       help = 'port of peer to use for sending of output dicom files')
+  parser.add_argument('--model_name', default = None, 
+           help = 'absolute path of pretrained model for liver segmentation')
 
   args = parser.parse_args()
   
@@ -234,6 +250,7 @@ def main():
   dcm_listener = LiverSegDicomProcessor(storage_dir         = storage_dir, 
                                         processing_dir      = process_dir,
                                         cleanup_process_dir = (not args.no_cleanup),
+                                        sending_ip          = args.sending_ip,
                                         sending_port        = args.sending_port)
   
   handlers = [(evt.EVT_C_STORE,  dcm_listener.handle_store), 
