@@ -24,7 +24,7 @@ An alternative to install the package (especially for developers) is to clone th
 
 ---
 
-### Model prediction for liver segmentation
+### Offline model prediction for liver segmentation
 * The input image is in DICOM format
 ```
 python predict_liver_lesion_seg.py <data_input> --seg_liver
@@ -36,6 +36,18 @@ python predict_liver_lesion_seg.py <data_input> --seg_liver
 python predict_liver_lesion_seg.py <data_input> --seg_liver --input_nifti --Modality CT
 ```
 <data_input> is the directory of input dicom files of the image (CT or MR) or the path of a nifti file (CT or MR) that needs to be defined by the user.
+
+### Dicom services for liver ans liver lesion segmentation
+
+On top of the scripts for offline segmentation, we also provide two scripts to run dicom services for the segmentations. Those services can be started via:
+```
+python dcm_server_liver_seg.py
+```
+
+```
+python dcm_server_liver_lesion_seg.py
+```
+These services start a dicom server that is listening on a port that can be specified for incoming dicom series that should be segmented. After arrival of a series (after the the dicom association is released), the CNN processing is started and the resulting RTstruct is sent back to the sender. To segment liver lesions, an RTstruct defining the whole liver has to be sent first, followed by the image to be segmented. As usual, the ```-h``` can be used to see all command line arguments. The default listening ports are 11112 and 11113 and the RTstruct is sent back via port 104.
 
 ### Model prediction for lesion segmentation
 * The input image is in DICOM format
