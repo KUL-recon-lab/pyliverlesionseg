@@ -173,6 +173,7 @@ class LiverSegDicomProcessor:
   def handle_echo(self,event):
     """Handle a C-ECHO request event."""
     self.logger.info('echo')
+    self.reset_last_storage_information()
     return 0x0000
 
   def worker(self):
