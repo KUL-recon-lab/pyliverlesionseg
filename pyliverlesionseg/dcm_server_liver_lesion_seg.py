@@ -255,7 +255,7 @@ def main():
   parser.add_argument('--dcm_storage_dir', default = None,   help = 'storage directory for incoming dicoms')
   parser.add_argument('--dcm_process_dir', default = None,   help = 'processing directory for valid dicoms')
   parser.add_argument('--no_cleanup', action = 'store_true', help = 'do not remove processed dicom files')
-  parser.add_argument('--AE', default = 'Liver-Seg', help = 'AE title of dicom server')
+  parser.add_argument('--AE', default = 'Liver-Lesion-Seg', help = 'AE title of dicom server')
   parser.add_argument('--listening_port', default = 11113, type = int, 
                       help = 'port where dicom server is listening')
   parser.add_argument('--sending_ip', default = None, 
