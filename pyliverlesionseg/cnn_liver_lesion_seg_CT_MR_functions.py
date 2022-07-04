@@ -1233,7 +1233,7 @@ def cnn_liver_lesion_seg_CT_MR_main(input_data ,
       ofile_liver = os.path.join(output_series_liver_seg_path, imgname + '_cnn_pred_liver.dcm')
       pymf.labelvol_to_rtstruct(cnn_liver_pred_pad, affine_lps, dcm_files, 
                                 ofile_liver,
-                                seriesDescription = 'liver CNN', 
+                                seriesDescription = 'CNN Liver segmentation', 
                                 structureSetName  = structureSetName, 
                                 roinames          = ['liver CNN'],
                                 roidescriptions   = ['liver CNN'],
@@ -1400,7 +1400,7 @@ def cnn_liver_lesion_seg_CT_MR_main(input_data ,
         # convert binary mask to RTstruct
         ofile = os.path.join(output_series_lesion_seg_path, imgname + '_cnn_pred_liver_lesions.dcm')
         pymf.labelvol_to_rtstruct(cnn_lesion_pred_pad_lps, affine_lps, dcm_files, ofile,
-                                  seriesDescription = 'liver lesions CNN', 
+                                  seriesDescription = 'CNN Liver Lesions segmentation', 
                                   structureSetName  = structureSetName, 
                                   roinames          = ['liver lesions CNN'],
                                   roidescriptions   = ['liver lesions CNN'],
